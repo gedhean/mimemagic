@@ -13,12 +13,17 @@ Gem::Specification.new do |s|
   s.files         = `git ls-files`.split("\n")
   s.require_paths = %w(lib)
 
-  s.rubyforge_project = s.name
   s.summary = 'Fast mime detection by extension or content'
   s.description = 'Fast mime detection by extension or content in pure ruby (Uses freedesktop.org.xml shared-mime-info database)'
   s.homepage = 'https://github.com/minad/mimemagic'
   s.license = 'MIT'
 
-  s.add_development_dependency('bacon')
+  s.add_development_dependency('minitest', '~> 5.11')
   s.add_development_dependency('rake')
+
+  if s.respond_to?(:metadata)
+    s.metadata['changelog_uri'] = "https://github.com/minad/mimemagic/blob/master/CHANGELOG.md"
+    s.metadata['source_code_uri'] = "https://github.com/minad/mimemagic"
+    s.metadata['bug_tracker_uri'] = "https://github.com/minad/mimemagic/issues"
+  end
 end
