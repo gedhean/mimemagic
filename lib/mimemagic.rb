@@ -1,6 +1,8 @@
 require 'mimemagic/tables'
 require 'mimemagic/version'
 
+require 'stringio'
+
 # Mime type detection
 class MimeMagic
   attr_reader :type, :mediatype, :subtype
@@ -76,17 +78,14 @@ class MimeMagic
   # Lookup mime type by magic content analysis.
   # This is a slow operation.
   def self.by_magic(io)
-    mime =
-      unless io.respond_to?(:seek) && io.respond_to?(:read)
-        str = io.respond_to?(:read) ? io.read : io.to_s
-        str = str.force_encoding(Encoding::BINARY) if str.respond_to? :force_encoding
-        MAGIC.find {|type, matches| magic_match_str(str, matches) }
-      else
-        io.binmode
-        io.set_encoding(Encoding::BINARY) if io.respond_to?(:set_encoding)
-        MAGIC.find {|type, matches| magic_match_io(io, matches) }
-      end
+    mime = magic_match(io, :find)
     mime && new(mime[0])
+  end
+
+  # Lookup all mime types by magic content analysis.
+  # This is a slower operation.
+  def self.all_by_magic(io)
+    magic_match(io, :select).map { |mime| new(mime[0]) }
   end
 
   # Return type as string
@@ -109,33 +108,31 @@ class MimeMagic
     child == parent || TYPES.key?(child) && TYPES[child][1].any? {|p| child?(p, parent) }
   end
 
-  def self.magic_match_io(io, matches)
+  def self.magic_match(io, method)
+    return magic_match(StringIO.new(io.to_s), method) unless io.respond_to?(:read)
+
+    io.binmode if io.respond_to?(:binmode)
+    io.set_encoding(Encoding::BINARY) if io.respond_to?(:set_encoding)
+    buffer = "".force_encoding(Encoding::BINARY)
+
+    MAGIC.send(method) { |type, matches| magic_match_io(io, matches, buffer) }
+  end
+
+  def self.magic_match_io(io, matches, buffer)
     matches.any? do |offset, value, children|
       match =
         if Range === offset
-          io.seek(offset.begin)
-          x = io.read(offset.end - offset.begin + value.bytesize)
+          io.read(offset.begin, buffer)
+          x = io.read(offset.end - offset.begin + value.bytesize, buffer)
           x && x.include?(value)
         else
-          io.seek(offset)
-          io.read(value.bytesize) == value
+          io.read(offset, buffer)
+          io.read(value.bytesize, buffer) == value
         end
-      match && (!children || magic_match_io(io, children))
+      io.rewind
+      match && (!children || magic_match_io(io, children, buffer))
     end
   end
 
-  def self.magic_match_str(str, matches)
-    matches.any? do |offset, value, children|
-      match =
-        if Range === offset
-          x = str[offset.begin, offset.end - offset.begin + value.bytesize]
-          x && x.include?(value)
-        else
-          str[offset, value.bytesize] == value
-        end
-      match && (!children || magic_match_str(str, children))
-    end
-  end
-
-  private_class_method :magic_match_io, :magic_match_str
+  private_class_method :magic_match, :magic_match_io
 end
