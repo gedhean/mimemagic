@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
   s.rubyforge_project = s.name
   s.summary = 'Fast mime detection by extension or content'
   s.description = 'Fast mime detection by extension or content in pure ruby (Uses freedesktop.org.xml shared-mime-info database)'
-  s.homepage = 'https://github.com/minad/mimemagic'
+  s.homepage = 'https://github.com/gedhean/mimemagic'
   s.license = 'MIT'
 
   s.add_development_dependency('bacon')
